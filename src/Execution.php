@@ -1119,9 +1119,6 @@ function FindFunction($ClassName, $FuncName) {
  */
 function Evaluate($Var, $Slice, $arrkey = false) {
     if($Var instanceof Expr\Variable) {
-        $FromEncrypt = false;
-        if(encrypt(printexpr($Var)))
-            $FromEncrypt = true;
         if(is_string($Var->name)) {
             //  TODO $this
             if($Var->name == 'this') {
@@ -1130,18 +1127,19 @@ function Evaluate($Var, $Slice, $arrkey = false) {
             elseif(!isset($Slice->Variables[$Var->name])) {
                 $pos = count($Slice->VariableValues);
                 $Slice->Variables[$Var->name] = $pos;
+                $tmp =  new Variable();
+                $tmp->Value = $Var;
                 if($arrkey){
-                    $Slice->VariableValues[$pos] = new Variable();
+                    $Slice->VariableValues[$pos] = $tmp;
                 }
                 else {
-                    $Slice->VariableValues[$pos] = new Variable();
+
+                    $Slice->VariableValues[$pos] = $tmp; 
                 }
             }
             else{
                 $pos = $Slice->Variables[$Var->name];
             }
-            if($FromEncrypt)
-                $Slice->VariableValues[$pos]->FromEncrypt = $FromEncrypt;
             return $Slice->VariableValues[$pos];
         }
         return NULL;
@@ -1162,19 +1160,20 @@ function Evaluate($Var, $Slice, $arrkey = false) {
             else {
                 return NULL;
             }
-        if($Array instanceof Variable) {
-            $Array->IsTainted = $FromGlobal;
-            $item = $Array->FindKey($Var->dim); // check this function todo
-            if($item === NULL) {
-                // Rethink about it. avoid to use global variables because of the conflict name
-                $key = new Node\Scalar\LNumber(count($Array->Items));
-                $item = new ArrayItem($key, NULL);// append
-                $Array->Items[count($Array->Items)] = $item;
+            if($Array instanceof Variable) {
+                $Array->IsTainted = $FromGlobal;
+                $item = $Array->FindKey($Var->dim); // check this function todo
+                if($item === NULL) {
+                    // Rethink about it. avoid to use global variables because of the conflict name
+                    $key = new Node\Scalar\LNumber(count($Array->Items));
+                    $item = new ArrayItem($key, $Var);// append
+                    $Array->Items[count($Array->Items)] = $item;
+                    //print("global111");
+                }
+                $item->IsTainted = $FromGlobal;
+                $item->Types[] = ($FromGlobal) ? Variable::String_ : Variable::Unknown_;
+                return $item;
             }
-            $item->IsTainted = $FromGlobal;
-            $item->Types[] = ($FromGlobal) ? Variable::String_ : Variable::Unknown_;
-            return $item;
-        }
         return NULL;
     }
     elseif($Var instanceof Expr\PropertyFetch) {
